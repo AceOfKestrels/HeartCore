@@ -1,142 +1,78 @@
 package kestrel.heartcore.main;
 
 import java.io.File;
-import java.util.HashMap;
-import java.util.Map;
 
-import org.bukkit.BanList;
 import org.bukkit.Bukkit;
 import org.bukkit.ChatColor;
 import org.bukkit.Material;
 import org.bukkit.configuration.file.YamlConfiguration;
-import org.bukkit.entity.Player;
-import org.bukkit.event.EventHandler;
-import org.bukkit.event.EventPriority;
-import org.bukkit.event.Listener;
-import org.bukkit.event.entity.EntityDamageEvent;
-import org.bukkit.event.entity.PlayerDeathEvent;
-import org.bukkit.event.player.PlayerQuitEvent;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.SkullMeta;
 import org.bukkit.plugin.java.JavaPlugin;
-import org.bukkit.scheduler.BukkitRunnable;
 
-public class HeartCoreMain extends JavaPlugin implements Listener {
+import kestrel.heartcore.main.module.combattimer.CombatTimer;
+import kestrel.heartcore.main.module.command.CommandSetMaxHealth;
+import kestrel.heartcore.main.module.command.CommandSkull;
+import kestrel.heartcore.main.module.death.DeathHandler;
 
-	private static final HeartCoreMain instance = HeartCoreMain.getPlugin(HeartCoreMain.class);
+public class HeartCoreMain extends JavaPlugin {
+
+	private static HeartCoreMain instance;
 	private static YamlConfiguration config;
-	private static short modifier;
-	private static boolean reduceOnPlayerKills;
-	private static boolean dropHeadOnDeath;
-	private static boolean dropHeadOnPlayerKill;
-	private static String msgHealthReduced;
-	private static String msgBanned;
-	private static String headNamePrefix;
 
-	private static int combatTime;
-	private static String msgCombatTimer;
-	private static String msgCombatOver;
-	private static Map<Player, Long> combatTimers;
+	private static String headNamePrefix;
 
 	@Override
 	public void onEnable() {
+		instance = HeartCoreMain.getPlugin(HeartCoreMain.class);
 		config = saveConfigFile();
-		Bukkit.getPluginManager().registerEvents(this, this);
-		modifier = (short) config.getInt("modifier");
-		reduceOnPlayerKills = config.getBoolean("reduceOnPlayerKills");
-		dropHeadOnDeath = config.getBoolean("dropHeadOnDeath");
-		dropHeadOnPlayerKill = config.getBoolean("dropHeadOnPlayerKill");
-		msgHealthReduced = replaceColorCodes(config.getString("msgHealthReduced"));
-		msgBanned = replaceColorCodes(config.getString("msgBanned"));
-		headNamePrefix = replaceColorCodes(config.getString("headNamePrefix"));
 
-		combatTime = config.getInt("combatTime");
-		if (combatTime > 0) {
-			combatTimers = new HashMap<>();
-			msgCombatTimer = replaceColorCodes(config.getString("msgCombatTimer"));
-			msgCombatOver = replaceColorCodes(config.getString("msgCombatOver"));
-			BukkitRunnable combatTimeMessager = new BukkitRunnable() {
-
-				@Override
-				public void run() {
-					for (Player p : combatTimers.keySet()) {
-						if (combatTimers.containsKey(p))
-							if (combatTimers.get(p) > System.currentTimeMillis()) {
-								p.sendMessage(msgCombatTimer
-										+ Math.floor((combatTimers.get(p) - System.currentTimeMillis()) / 1000));
-							} else {
-								p.sendMessage(msgCombatOver);
-								combatTimers.remove(p);
-							}
-					}
-				}
-			};
-			combatTimeMessager.runTaskTimer(this, 10, 10);
+		if (config.getBoolean("death.enabled"))
+			Bukkit.getPluginManager().registerEvents(new DeathHandler(), this);
+		if (config.getInt("combatTimer.time") > 0)
+			Bukkit.getPluginManager().registerEvents(new CombatTimer(), this);
+		if (config.getBoolean("commands.skull.enabled")) {
+			getCommand("skull").setExecutor(new CommandSkull());
+			getCommand("skull").setTabCompleter(new CommandSkull());
 		}
+		if (config.getBoolean("commands.setMaxHealth.enabled")) {
+			getCommand("setmaxhealth").setExecutor(new CommandSetMaxHealth());
+			getCommand("setmaxhealth").setTabCompleter(new CommandSetMaxHealth());
+		}
+		headNamePrefix = replaceColorCodes(config.getString("headNamePrefix"));
 	}
 
 	private static YamlConfiguration saveConfigFile() {
-		instance.saveResource(instance.getDataFolder() + "/config.yml", false);
-		return YamlConfiguration.loadConfiguration(new File(instance.getDataFolder() + "/config.yml"));
+		File f = new File(instance.getDataFolder() + "/config.yml");
+		if (!f.exists())
+			instance.saveResource("config.yml", false);
+		return YamlConfiguration.loadConfiguration(f);
 	}
 
-	private static String replaceColorCodes(String replace) {
+	public static YamlConfiguration getConfiguration() {
+		return config;
+	}
+
+	public static HeartCoreMain getInstance() {
+		return instance;
+	}
+
+	public static String replaceColorCodes(String replace) {
 		for (ChatColor color : ChatColor.values())
-			replace.replace(color.name(), color.toString());
+			replace = replace.replace(color.name(), color.toString());
 		return replace;
 	}
 
 	@SuppressWarnings("deprecation")
-	@EventHandler(priority = EventPriority.HIGHEST)
-	public void onPlayerDeath(PlayerDeathEvent e) {
-		if (!reduceOnPlayerKills && isPlayerKill(e))
-			return;
-
-		if (dropHeadOnDeath && (dropHeadOnPlayerKill || !isPlayerKill(e)))
-			e.getDrops().add(getPlayerHead(e.getEntity()));
-
-		if (e.getEntity().getMaxHealth() < modifier) {
-			Bukkit.getBanList(BanList.Type.NAME).addBan(e.getEntity().getName(), msgBanned, null, "HeartCore");
-			e.getEntity().kickPlayer(msgBanned);
-			return;
-		}
-
-		e.getEntity().setMaxHealth(e.getEntity().getMaxHealth() - modifier);
-		e.getEntity().sendMessage(msgHealthReduced + modifier);
-	}
-
-	private static boolean isPlayerKill(PlayerDeathEvent e) {
-		String stringToCheck = e.getDeathMessage().substring(e.getEntity().getName().length());
-		for (Player p : Bukkit.getOnlinePlayers())
-			if (!p.getName().equals(e.getEntity().getName()))
-				if (stringToCheck.contains(p.getName()))
-					return true;
-		return false;
-	}
-
-	private static ItemStack getPlayerHead(Player p) {
+	public static ItemStack getPlayerHead(String name) {
 		ItemStack head = new ItemStack(Material.PLAYER_HEAD);
 		SkullMeta meta = (SkullMeta) head.getItemMeta();
-		meta.setOwningPlayer(p);
-		meta.setDisplayName(headNamePrefix + p.getName());
+		meta.setOwner(name);
+		meta.setDisplayName(headNamePrefix + name);
+		if (Bukkit.getPlayer(name) != null)
+			meta.setDisplayName(headNamePrefix + Bukkit.getPlayer(name).getName());
 		head.setItemMeta(meta);
 		return head;
 	}
 
-	@EventHandler(priority = EventPriority.HIGHEST)
-	public void onPlayerDamage(EntityDamageEvent e) {
-		if (!(e.getEntity() instanceof Player))
-			return;
-		if (combatTime <= 0)
-			return;
-		combatTimers.put((Player) e.getEntity(), System.currentTimeMillis() + (combatTime * 1000));
-		((Player) e.getEntity()).sendMessage(msgCombatTimer + combatTime);
-	}
-
-	@EventHandler(priority = EventPriority.HIGHEST)
-	public void onPlayerQuit(PlayerQuitEvent e) {
-		if (combatTime > 0)
-			if (combatTimers.get(e.getPlayer()) > System.currentTimeMillis())
-				e.getPlayer().damage(100);
-	}
 }

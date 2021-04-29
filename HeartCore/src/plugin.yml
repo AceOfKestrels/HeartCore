@@ -1,4 +1,9 @@
 main: kestrel.heartcore.main.HeartCoreMain
 name: HeartCore
-version: 1.0a
+version: 1.0
+api-version: 1.16
 author: AceOfKestrels
+
+commands:
+  skull:
+  setmaxhealth:

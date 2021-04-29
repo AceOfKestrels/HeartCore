@@ -1,10 +1,24 @@
-modifier: 2
-reduceOnPlayerKills: false
-dropHeadOnDeath: true
-dropHeadOnPlayerKill: true
-msgHealthReduced: GRAY[DARK_REDHeartCoreGRAY] YELLOWYour max health was reduced by DARK_RED
-msgBanned: REDYou have no more lives left.
+death:
+  enabled: true
+  healthModifier: 2
+  reduceOnPlayerKills: false
+  dropHeadOnDeath: true
+  dropHeadOnPlayerKill: true
+  msgHealthReduced: GRAY[DARK_REDHeartCoreGRAY] YELLOWYour max health was reduced by DARK_RED
+  msgBanned: REDYou have no more lives left.
 headNamePrefix: YELLOWHead of RED
-combatTime: 5
-msgCombatTimer: RED
-msgCombatOver: GREENYou can log out again.
+combatTimer:
+  time: 5
+  msgCombatTimer: RED
+  msgCombatOver: GREEN0
+  msgCombatLog: combat logged.
+  msgCombatLogEntity: combat logged while fighting
+commands:
+  skull:
+    enabled: true
+    msgSuccess: GRAY[DARK_REDHeartCoreGRAY] YELLOWYou recieved a head.
+    msgFailArgs: GRAY[DARK_REDHeartCoreGRAY] YELLOWYUsage /skull <PlayerName>
+  setMaxHealth:
+    enabled: true
+    msgSuccess: GRAY[DARK_REDHeartCoreGRAY] YELLOWMax health was set to RED
+    msgFailArgs: GRAY[DARK_REDHeartCoreGRAY] YELLOWUsage /setmaxhealth <PlayerName> <Number>
