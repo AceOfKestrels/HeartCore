@@ -1,0 +1,10 @@
+modifier: 2
+reduceOnPlayerKills: false
+dropHeadOnDeath: true
+dropHeadOnPlayerKill: true
+msgHealthReduced: GRAY[DARK_REDHeartCoreGRAY] YELLOWYour max health was reduced by DARK_RED
+msgBanned: REDYou have no more lives left.
+headNamePrefix: YELLOWHead of RED
+combatTime: 5
+msgCombatTimer: RED
+msgCombatOver: GREENYou can log out again.
